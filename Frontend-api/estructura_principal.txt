@@ -1,0 +1,16 @@
+/Users/user/SCOUTVISION/iDATAi/FronBackend/Frontend-api
+├── README.md
+├── api
+├── eslint.config.js
+├── estructura_frontend.txt
+├── estructura_principal.txt
+├── frontend
+├── index.html
+├── node_modules
+├── package-lock.json
+├── package.json
+├── public
+├── src
+└── vite.config.js
+
+6 directories, 8 files

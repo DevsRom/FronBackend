@@ -1,0 +1,14 @@
+{
+  "folders": [
+	{
+		"path": "../../../Backend-api"
+	},
+	{
+		"path": "../.."
+	}
+],
+  "settings": {
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic"
+  }
+}

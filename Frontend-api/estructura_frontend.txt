@@ -1,0 +1,47 @@
+src
+├── App.jsx
+├── assets
+│   └── react.svg
+├── components
+│   ├── ChartComponent.jsx
+│   ├── ColumnSelector.jsx
+│   ├── CreateProjectButton.jsx
+│   ├── DataTable.jsx
+│   ├── FileUploader.jsx
+│   ├── Footer.jsx
+│   ├── Header.jsx
+│   ├── LogoutButton.jsx
+│   ├── MapboxMap.jsx
+│   ├── Navbar.jsx
+│   ├── NewProject.jsx
+│   ├── Notifications.jsx
+│   ├── ProgressBar.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── SendButton.jsx
+│   └── Source3D.jsx
+├── config.js
+├── hooks
+│   ├── useAuth.jsx
+│   └── useCSVHandler.jsx
+├── index.css
+├── main.jsx
+├── pages
+│   ├── Backend-api.code-workspace
+│   ├── Dashboard.jsx
+│   ├── Home.jsx
+│   ├── Login.jsx
+│   ├── Register.jsx
+│   └── customTheme.js
+├── styles
+│   ├── App.css
+│   ├── Components.css
+│   ├── MapboxMap.css
+│   ├── ProgressBar.css
+│   └── theme.js
+└── views
+    ├── DashboardView.jsx
+    ├── MapView.jsx
+    ├── ProjectsView.jsx
+    └── UserView.jsx
+
+7 directories, 38 files

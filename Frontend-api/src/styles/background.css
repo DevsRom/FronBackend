@@ -1,0 +1,55 @@
+/* src/styles/background.css */
+.container-with-image {
+  display: flex;
+  align-items: stretch; /* Asegura que ambas columnas tengan la misma altura */
+  min-height: 100vh;
+  background-color: transparent; /* Fondo transparente */
+}
+
+.form-container {
+  background-color: transparent; /* Fondo transparente */
+  padding: 2rem;
+  border: none; /* Sin borde exterior */
+  border-radius: 0; /* Sin bordes redondeados */
+  box-shadow: none; /* Sin sombra */
+  max-width: 400px;
+  width: 100%;
+  margin: 2rem; /* Espacio alrededor del formulario */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Centra el formulario verticalmente */
+}
+
+/* Estilo para el cuadro de Login/Register */
+.form-container Paper {
+  border: 1px solid #ccc; /* Borde del cuadro de Login/Register */
+  border-radius: 8px; /* Bordes redondeados */
+  padding: 2rem;
+  background-color: white; /* Fondo blanco para el cuadro */
+}
+
+.image-container {
+  flex: 1; /* Ocupa el espacio restante */
+  display: flex;
+  align-items: stretch; /* Asegura que la imagen ocupe todo el alto */
+  position: relative; /* Necesario para el overlay */
+}
+
+.image-container img {
+  width: 100%; /* La imagen ocupa todo el ancho del contenedor */
+  height: 100%; /* La imagen ocupa todo el alto del contenedor */
+  object-fit: cover; /* Ajusta la imagen para cubrir el espacio sin distorsionarla */
+  border-radius: 0; /* Elimina el borde redondeado si es necesario */
+}
+
+/* Overlay azul transparente */
+.image-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 255, 0.3); /* Azul con 30% de opacidad */
+  pointer-events: none; /* Permite interactuar con la imagen debajo */
+}
