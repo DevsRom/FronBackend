@@ -21,9 +21,11 @@ const MapboxMap = ({ mapData }) => {
     // Cargar los datos en Supercluster
     if (mapData && Array.isArray(mapData)) {
       const points = mapData
-        .filter(({ latitude, longitude, depth }) => 
-          !isNaN(latitude) && !isNaN(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
-        )
+        .filter(({ latitude, longitude, depth }) => {
+          const lat = parseFloat(latitude);
+          const lon = parseFloat(longitude);
+          return !isNaN(lat) && !isNaN(lon); // Filtrar valores no numéricos
+        })
         .map(({ latitude, longitude, depth }) => ({
           type: "Feature",
           properties: { depth: parseFloat(depth) },
@@ -162,6 +164,18 @@ const MapboxMap = ({ mapData }) => {
 
     console.log("✅ Datos recibidos en MapboxMap.jsx:", mapData);
 
+    // Validar que los datos sean números válidos
+    const validData = mapData.filter(({ latitude, longitude }) => {
+      const lat = parseFloat(latitude);
+      const lon = parseFloat(longitude);
+      return !isNaN(lat) && !isNaN(lon); // Filtrar valores no numéricos
+    });
+
+    if (validData.length === 0) {
+      console.warn("⚠️ No hay datos válidos para ajustar los límites del mapa.");
+      return;
+    }
+
     // Actualizar la fuente de datos del mapa
     const source = map.current.getSource("clusters");
     if (source) {
@@ -174,7 +188,7 @@ const MapboxMap = ({ mapData }) => {
 
     // Ajustar el zoom a los datos
     const bounds = new mapboxgl.LngLatBounds();
-    mapData.forEach(({ latitude, longitude }) => {
+    validData.forEach(({ latitude, longitude }) => {
       bounds.extend([parseFloat(longitude), parseFloat(latitude)]);
     });
 

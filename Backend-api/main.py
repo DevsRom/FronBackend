@@ -5,32 +5,162 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from scipy.interpolate import griddata
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from UserRegister import router as user_router
-import models
-from database import Base, engine
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from pydantic import BaseModel
+from typing import Optional
+import json  # Para leer el archivo de usuarios
 
 # Configurar logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = FastAPI()
 
-# 📌 Crear la base de datos si no existe
-Base.metadata.create_all(bind=engine)
-
-# 📌 Incluir las rutas de autenticación y usuarios
-app.include_router(user_router, prefix="/api")
-
-# 📌 Configuración de CORS
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # Solo permite localhost:3000
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configuración de JWT
+SECRET_KEY = "tu_clave_secreta"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Configuración de seguridad
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Modelo de usuario
+class User(BaseModel):
+    email: str
+    role: str
+
+# Modelo de token
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    role: str  # Añadimos el rol en la respuesta del token
+
+# Modelo de datos de token
+class TokenData(BaseModel):
+    email: Optional[str] = None
+    role: Optional[str] = None
+
+# Modelo para el registro de usuarios
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+# Función para leer usuarios desde un archivo JSON
+def read_users():
+    try:
+        with open("user.json", "r") as file:  # Asegúrate de que el archivo esté en la raíz del proyecto
+            users = json.load(file)
+        return users
+    except FileNotFoundError:
+        return []
+
+# Función para escribir usuarios en un archivo JSON
+def write_users(users):
+    with open("user.json", "w") as file:
+        json.dump(users, file)
+
+# Función para verificar la contraseña
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Función para obtener el hash de la contraseña
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+# Función para obtener el usuario desde la base de datos
+def get_user(email: str):
+    users = read_users()
+    user = next((u for u in users if u["email"] == email), None)
+    return user
+
+# Función para autenticar al usuario
+def authenticate_user(email: str, password: str):
+    user = get_user(email)
+    if not user or not verify_password(password, user["password"]):
+        return None
+    return user
+
+# Función para crear un token de acceso
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# Ruta para obtener el token de acceso
+@app.post("/api/token", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales incorrectas",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["email"], "role": user["role"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer", "role": user["role"]}
+
+# Ruta para registrar un nuevo usuario
+@app.post("/api/register")
+async def register(request: RegisterRequest):
+    users = read_users()
+    if get_user(request.email):
+        raise HTTPException(status_code=400, detail="El usuario ya existe")
+    
+    hashed_password = get_password_hash(request.password)
+    new_user = {"email": request.email, "password": hashed_password, "role": "user"}
+    users.append(new_user)
+    write_users(users)
+    return {"message": "Usuario registrado exitosamente"}
+
+# Middleware para verificar el token
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No autorizado",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        role: str = payload.get("role")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email, role=role)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(email=token_data.email)
+    if user is None:
+        raise credentials_exception
+    return user
+
+# Middleware para verificar si el usuario es Super Usuario
+async def is_super_user(current_user: User = Depends(get_current_user)):
+    if current_user["role"] != "superuser":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado")
+    return current_user
 
 # 📂 Definir rutas de almacenamiento
 PROJECTS_DIR = "data/projects"
@@ -47,9 +177,13 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 def clean_project_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_\-]", "_", name).strip()
 
+@app.get("/api/me")
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    return {"user": current_user}
+
 # 📌 Endpoint para listar proyectos existentes
 @app.get("/api/projects")
-def list_projects():
+async def list_projects(current_user: User = Depends(get_current_user)):
     try:
         return {"projects": os.listdir(PROJECTS_DIR)}
     except Exception as e:
@@ -57,7 +191,7 @@ def list_projects():
 
 # 📌 Endpoint para crear un nuevo proyecto
 @app.post("/api/new_project")
-def create_project(name: str, overwrite: bool = False):
+async def create_project(name: str, overwrite: bool = False, current_user: User = Depends(is_super_user)):
     name = clean_project_name(name)
     if not name:
         raise HTTPException(status_code=400, detail="Nombre de proyecto inválido.")
@@ -72,7 +206,7 @@ def create_project(name: str, overwrite: bool = False):
 
 # 📌 Endpoint para subir archivos CSV
 @app.post("/api/bathymetry/upload/{project_name}")
-async def upload_bathymetry(project_name: str, file: UploadFile = File(...)):
+async def upload_bathymetry(project_name: str, file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     project_name = clean_project_name(project_name)
     project_path = os.path.join(PROJECTS_DIR, project_name)
 
@@ -99,7 +233,6 @@ async def upload_bathymetry(project_name: str, file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="El archivo CSV está vacío.")
 
         # Renombrar las columnas según lo seleccionado por el usuario
-        # (Esto debe coincidir con lo que el frontend envía)
         df = df.rename(columns={
             "latitude": "latitude",
             "longitude": "longitude",
@@ -124,7 +257,7 @@ async def upload_bathymetry(project_name: str, file: UploadFile = File(...)):
 
 # 📌 Endpoint para obtener datos batimétricos
 @app.get("/api/bathymetry/data/{project_name}")
-async def get_bathymetry_data(project_name: str):
+async def get_bathymetry_data(project_name: str, current_user: User = Depends(get_current_user)):
     project_name = clean_project_name(project_name)
     project_path = os.path.join(PROJECTS_DIR, project_name)
 
@@ -143,7 +276,7 @@ async def get_bathymetry_data(project_name: str):
 
 # 📌 Endpoint para generar modelo 3D
 @app.get("/api/bathymetry/model/{project_name}")
-async def generate_3d_model(project_name: str):
+async def generate_3d_model(project_name: str, current_user: User = Depends(get_current_user)):
     project_name = clean_project_name(project_name)
     project_path = os.path.join(PROJECTS_DIR, project_name)
 

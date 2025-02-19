@@ -7,7 +7,7 @@ import { useAuth } from "../hooks/useAuth";
 import "../styles/background.css";
 
 const Register = () => {
-  const [form, setForm] = useState({ email: "", password: "", role: "" });
+  const [form, setForm] = useState({ email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -19,11 +19,17 @@ const Register = () => {
     setLoading(true);
     setError("");
 
+    if (form.password !== form.confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ email: form.email, password: form.password }),
       });
 
       if (!response.ok) {
@@ -32,10 +38,8 @@ const Register = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem("token", data.access_token);
-      setUser({ email: form.email });
       setOpenSnackbar(true);
-      navigate("/dashboard");
+      navigate("/login");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -46,7 +50,7 @@ const Register = () => {
   return (
     <div className="container-with-image">
       <div className="form-container">
-        <Paper elevation={0} sx={{ padding: 3, textAlign: "center", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "white" }}> {/* Borde y fondo blanco */}
+        <Paper elevation={0} sx={{ padding: 3, textAlign: "center", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "white" }}>
           <Typography variant="h5" fontFamily="Roboto">Registro</Typography>
           <form onSubmit={handleSubmit}>
             <TextField
@@ -70,10 +74,10 @@ const Register = () => {
             <TextField
               fullWidth
               margin="normal"
-              label="Rol"
-              type="text"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              label="Reingresar Contraseña"
+              type="password"
+              value={form.confirmPassword}
+              onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
               required
             />
             {error && <Alert severity="error">{error}</Alert>}
@@ -97,7 +101,7 @@ const Register = () => {
         </Snackbar>
       </div>
       <div className="image-container">
-        <img src="/13557453.jpg" alt="Background" /> {/* Usar la nueva imagen */}
+        <img src="/13557453.jpg" alt="Background" />
       </div>
     </div>
   );

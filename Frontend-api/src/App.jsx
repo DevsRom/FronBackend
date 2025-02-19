@@ -9,7 +9,7 @@ import { AuthProvider } from "./context/AuthContext";
 import DashboardView from "./views/DashboardView";
 import MapView from "./views/MapView";
 import ProjectsView from "./views/ProjectsView";
-import UsersView from "./views/UserView";
+import UsersView from "./views/UserView"; // Asegúrate de que el nombre del archivo coincida
 
 function App() {
   return (
@@ -36,7 +36,14 @@ function App() {
           <Route index element={<DashboardView />} />
           <Route path="map" element={<MapView />} />
           <Route path="projects" element={<ProjectsView />} />
-          <Route path="users" element={<UsersView />} />
+          <Route
+            path="users"
+            element={
+              <ProtectedRoute requiredRole="superuser"> {/* Solo el Super Usuario puede acceder */}
+                <UsersView />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
         {/* Ruta por defecto: Redirigir a / si no se encuentra la ruta */}

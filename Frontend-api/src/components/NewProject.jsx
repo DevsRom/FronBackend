@@ -16,7 +16,10 @@ function NewProject({ onCreate }) {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch(`${API_URL}/projects`);
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/projects`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!response.ok) throw new Error("Error al obtener proyectos");
         const data = await response.json();
         setProjectList(data.projects);
@@ -53,8 +56,10 @@ function NewProject({ onCreate }) {
   // 📌 **Crear proyecto en el backend**
   const createProject = async (name) => {
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/new_project?name=${encodeURIComponent(name)}`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {

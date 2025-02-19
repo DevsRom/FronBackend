@@ -31,11 +31,17 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_URL}/token`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          username: form.email,
+          password: form.password,
+        }),
+        credentials: "include", // 🔥 Añadido para CORS
       });
+      
+      
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -44,7 +50,8 @@ const Login = () => {
 
       const data = await response.json();
       localStorage.setItem("token", data.access_token);
-      login({ email: form.email });
+      login({ email: form.email, role: data.role });
+
       setOpenSnackbar(true);
       navigate("/dashboard");
     } catch (err) {
@@ -57,7 +64,7 @@ const Login = () => {
   return (
     <div className="container-with-image">
       <div className="form-container">
-        <Paper elevation={0} sx={{ padding: 3, textAlign: "center", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "white" }}> {/* Borde y fondo blanco */}
+        <Paper elevation={0} sx={{ padding: 3, textAlign: "center", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "white" }}>
           <Typography variant="h5" fontFamily="Roboto">Iniciar Sesión</Typography>
           <form onSubmit={handleSubmit}>
             <TextField
@@ -99,7 +106,7 @@ const Login = () => {
         </Snackbar>
       </div>
       <div className="image-container">
-        <img src="/13557453.jpg" alt="Background" /> {/* Usar la nueva imagen */}
+        <img src="/13557453.jpg" alt="Background" />
       </div>
     </div>
   );

@@ -89,8 +89,20 @@ export function useCSVHandler() {
 
     console.log("📋 Columnas seleccionadas por el usuario:", selectedColumns);
 
+    // Validar que los valores de latitud y longitud sean números válidos
+    const validData = data.filter(row => {
+      const lat = parseFloat(row[selectedColumns.latitude]);
+      const lon = parseFloat(row[selectedColumns.longitude]);
+      return !isNaN(lat) && !isNaN(lon); // Filtrar filas con valores no numéricos
+    });
+
+    if (validData.length === 0) {
+      console.error("❌ No se encontraron datos válidos en el archivo CSV.");
+      return;
+    }
+
     const csvContent = ["latitude,longitude,depth"]
-      .concat(data.map(row => `${row[selectedColumns.latitude]},${row[selectedColumns.longitude]},${row[selectedColumns.depth]}`))
+      .concat(validData.map(row => `${row[selectedColumns.latitude]},${row[selectedColumns.longitude]},${row[selectedColumns.depth]}`))
       .join("\n");
 
     console.log("📤 CSV generado antes de enviar al backend:\n", csvContent);
@@ -102,6 +114,12 @@ export function useCSVHandler() {
     formData.append("file", processedFile);
 
     try {
+      const token = localStorage.getItem("token"); // Obtener el token del localStorage
+
+      if (!token) {
+        throw new Error("No se encontró el token de autenticación.");
+      }
+
       const uploadUrl = `${API_URL}/bathymetry/upload/${projectName}`;
       console.log(`📡 Enviando archivo a: ${uploadUrl}`);
 
@@ -113,12 +131,22 @@ export function useCSVHandler() {
       }
 
       const response = await axios.post(uploadUrl, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`, // Enviar el token en el encabezado
+        },
       });
 
       console.log("✅ Archivo enviado correctamente:", response.data);
     } catch (error) {
       console.error("❌ Error al enviar el archivo:", error);
+
+      if (error.response && error.response.status === 401) {
+        // Si el error es 401 (No autorizado), redirigir al usuario a la página de inicio de sesión
+        localStorage.removeItem("token"); // Eliminar el token inválido
+        window.location.href = "/login"; // Redirigir al login
+      }
+
       setProgress(0); // Reiniciar el progreso en caso de error
     }
   }, [selectedFile, selectedColumns, data]);

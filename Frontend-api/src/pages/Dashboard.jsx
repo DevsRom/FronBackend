@@ -19,6 +19,8 @@ function Dashboard({ user, setUser }) {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [is3DView, setIs3DView] = useState(false); // Estado para controlar la vista (Mapa o Modelo 3D)
   const [is3DModelGenerated, setIs3DModelGenerated] = useState(false); // Estado para controlar si el modelo 3D está generado
+  const [modelPath, setModelPath] = useState(null); // Estado para almacenar la ruta del modelo 3D
+
   const {
     handleFileSelect,
     data,
@@ -69,8 +71,28 @@ function Dashboard({ user, setUser }) {
     }
 
     try {
-      // Lógica para generar el modelo 3D (llamada al backend, etc.)
-      console.log("🏗️ Generando modelo 3D...");
+      const token = localStorage.getItem("token"); // Obtén el token del almacenamiento local
+
+      if (!token) {
+        throw new Error("No se encontró el token de autenticación.");
+      }
+
+      // Llamada al backend para generar el modelo 3D
+      const response = await fetch(`http://127.0.0.1:8000/api/bathymetry/model/${projectName}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`, // Envía el token en el encabezado
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al generar el modelo 3D");
+      }
+
+      const data = await response.json();
+      const generatedModelPath = `http://127.0.0.1:8000${data.file_url}`; // URL completa del modelo 3D
+      setModelPath(generatedModelPath);
+
       setIs3DModelGenerated(true);
       setSnackbarMessage("🏗️ Modelo 3D generado con éxito.");
     } catch (error) {
@@ -174,7 +196,7 @@ function Dashboard({ user, setUser }) {
           {/* Contenedor para Mapa o Modelo 3D */}
           <Paper elevation={0} sx={{ border: "1px solid #e0e0e0", borderRadius: 2, fontFamily: "Roboto", fontSize: "0.875rem" }}>
             {is3DView ? (
-              is3DModelGenerated && <Source3D projectName={projectName} style={{ height: "500px", width: "100%" }} />
+              is3DModelGenerated && <Source3D modelPath={modelPath} style={{ height: "500px", width: "100%" }} />
             ) : (
               <MapboxMap mapData={data} style={{ height: "500px", width: "100%" }} />
             )}

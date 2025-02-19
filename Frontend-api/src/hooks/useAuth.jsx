@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://172.18.0.2:8000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export function useAuth() {
   const [user, setUser] = useState(null);
